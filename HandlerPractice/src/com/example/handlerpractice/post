@@ -1,0 +1,22 @@
+首先，post和postDelay都是Handler的方法，用以在子线程中发送Runnable对象的方法；
+
+其次，Android中post()方法可以直接在非UI线程中更新UI，不同与Handelr的Send类方法，需要进行切换；
+
+最后，两个方法在实现UI线程事件的时间上有所区别，postDelayed()方法用以延期执行，post则是立即执行；
+
+1，首先创建一个Handler对象
+Handler handler=new Handler();
+2，然后创建一个Runnable对象
+Runnable runnable=new Runnable(){
+   @Override
+   public void run() {
+    // TODO Auto-generated method stub
+    //要做的事情，这里再次调用此Runnable对象，以实现每两秒实现一次的定时器操作
+    handler.postDelayed(this, 2000);
+   } 
+};
+3，使用PostDelayed方法，两秒后调用此Runnable对象
+handler.postDelayed(runnable, 2000);
+实际上也就实现了一个2s的一个定时器
+4，如果想要关闭此定时器，可以这样操作
+handler.removeCallbacks(runnable);
