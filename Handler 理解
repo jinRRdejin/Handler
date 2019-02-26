@@ -1,0 +1,82 @@
+Handler主要有两个作用：
+
+在工作线程中发送消息。
+在UI线程中获取、处理消息。
+
+在Android开发的过程中，我们常常会将耗时的一些操作放在子线程（work thread）中去执行，然后将执行的结果告诉UI线程（main thread），
+Handler不仅仅能将子线程的数据传递给主线程，它能实现任意两个线程的数据传递。另外注意：子线程通过Handler的obtainMessage()方法获取到一个Message实例
+  Message message = mHandler.obtainMessage(MESSAGE_WHAT);
+                message.obj = "I am message from work thread";
+                mHandler.sendMessage(message);
+
+两个子线程通讯，handler对象需要创建自己线程的通过Looper.prepare(); 创建本线程的looper对象，并在HandlerMessage之后通过 Looper.loop();实现消息的
+轮询。
+
+Looper
+每一个线程只有一个Looper，每个线程在初始化Looper之后，然后Looper会维护好该线程的消息队列，用来存放Handler发送的Message，
+并处理消息队列出队的Message。它的特点是它跟它的线程是绑定的，
+Looper对象的内部又维护有唯一的一个MessageQueue，所以一个线程可以有多个handler，但是只能有一个Looper和一个MessageQueue。
+MessageQueue
+MessageQueue是一个消息队列，用来存放Handler发送的消息。MessageQueue通常都是由Looper来管理
+essage
+消息对象，就是MessageQueue里面存放的对象，一个MessageQueu可以包括多个Message。当我们需要发送一个Message时，我们一般不建议使用new Message()的形式来创建，
+更推荐使用Message.obtain() Message 的存储是链表的形式
+
+
+Message在MessageQueue不是通过一个列表来存储的，而是将传入的Message存入到了上一个Message的next中，
+在取出的时候通过顶部的Message就能按放入的顺序依次取出Message。
+Looper对象通过loop()方法开启了一个死循环，不断地从looper内的MessageQueue中取出Message，
+然后通过handler将消息分发传回handler所在的线程。
+
+1. Handler在使用过程中，需要注意的问题之一便是内存泄漏问题。
+
+首先，非静态内部类是会隐式持有外部类的引用，所以当其他线程持有了该Handler，线程没有被销毁，则意味着Activity会一直被Handler持有引用而无法导致回收。
+同时，MessageQueue中如果存在未处理完的Message，Message的target也是对Activity等的持有引用，也会造成内存泄漏。
+
+https://blog.csdn.net/wsq_tomato/article/details/80301851
+解决的办法：
+ (1). 使用静态内部类+弱引用的方式:
+ (2). 在外部类对象被销毁时，将MessageQueue中的消息清空。例如，在Activity的onDestroy时将消息清空。
+   handler.removeCallbacksAndMessages(null);
+   
+   
+   Post
+
+对于Handler的Post方式来说，它会传递一个Runnable对象到消息队列中，在这个Runnable对象中，重写run()方法。一般在这个run()方法中写入需要在UI线程上的操作。
+
+在Handler中，关于Post方式的方法有：
+boolean post(Runnable r)：把一个Runnable入队到消息队列中，UI线程从消息队列中取出这个对象后，立即执行。
+boolean postAtTime(Runnable r,long uptimeMillis)：把一个Runnable入队到消息队列中，UI线程从消息队列中取出这个对象后，在特定的时间执行。
+boolean postDelayed(Runnable r,long delayMillis)：把一个Runnable入队到消息队列中，UI线程从消息队列中取出这个对象后，延迟delayMills秒执行
+void removeCallbacks(Runnable r)：从消息队列中移除一个Runnable对象。
+
+sendMessage(Message msg);//立刻发送消息
+sendMessageAtTime(Message msg, long atTime);//在某个时间点发送消息
+sendMessageDelayed(Message msg, long delayedTime);//在当前时间点延迟一段时间发送消息
+
+sendMessageDelayed是如何实现延时发送消息的
+Handler在发送消息的时候，MessageQueue里的消息是按照发送时间点从小到大排列的， 
+如果最近的Message未到达发送的时间则阻塞。
+新加入的数据会根据时间点的大小判断需要插入的位置，同时还需要判断是否需要唤醒线程去发送当前的队首的消息。
+
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
